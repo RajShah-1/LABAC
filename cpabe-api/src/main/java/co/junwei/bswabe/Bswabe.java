@@ -214,7 +214,8 @@ public class Bswabe {
 	 * The policy is specified as a simple string which encodes a postorder
 	 * traversal of threshold tree defining the access policy. As an example,
 	 * 
-	 * "foo bar fim 2of3 baf 1of2"
+	 * "(foo bar fim 2of3) (baf) 1of2"
+	 * left right root
 	 * 
 	 * specifies a policy with two threshold gates and four leaves. It is not
 	 * possible to specify an attribute with whitespace in it (although "_" is
@@ -228,13 +229,15 @@ public class Bswabe {
 	public static BswabeCphKey enc(BswabePub pub, String policy)
 			throws Exception {
 		BswabeCphKey keyCph = new BswabeCphKey();
-		BswabeCph cph = new BswabeCph();
+		BswabeCph cph = new BswabeCph();	
 		Element s, m;
 
 		/* initialize */
 
 		Pairing pairing = pub.p;
+		// s -> secret
 		s = pairing.getZr().newElement();
+		// m -> ???
 		m = pairing.getGT().newElement();
 		cph.cs = pairing.getGT().newElement();
 		cph.c = pairing.getG1().newElement();
@@ -456,7 +459,7 @@ public class Bswabe {
 			p.c = pub.g.duplicate();;
 			p.c.powZn(p.q.coef[0]); 	
 			p.cp = h.duplicate();
-			p.cp.powZn(p.q.coef[0]);
+			p.cp.powZn(p.q.	coef[0]);	
 		} else {
 			for (i = 0; i < p.children.length; i++) {
 				r.set(i + 1);

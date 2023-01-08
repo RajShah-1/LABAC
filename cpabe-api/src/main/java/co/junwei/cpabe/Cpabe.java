@@ -80,7 +80,7 @@ public class Cpabe {
 		System.err.println("m = " + m.toString());
 
 		if (cph == null) {
-			System.out.println("Error happed in enc");
+			System.out.println("Error happened in enc");
 			System.exit(0);
 		}
 

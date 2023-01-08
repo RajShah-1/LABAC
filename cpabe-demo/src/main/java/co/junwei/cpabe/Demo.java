@@ -404,7 +404,7 @@ public class Demo {
 			+ "sn:student2 cn:student2 uid:student2 userPassword:student2 "
 			+ "ou:idp o:computer mail:student2@sdu.edu.cn title:student";
 
-	static String student_policy = "sn:student2 cn:student2 uid:student2 3of3";
+	static String student_policy = "sn:student2 cn:student2 uid:student2 3of3"; // K = 3
 
 	public static void main(String[] args) throws Exception {
 		String attr_str;
