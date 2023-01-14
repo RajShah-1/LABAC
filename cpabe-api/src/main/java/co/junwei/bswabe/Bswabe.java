@@ -19,6 +19,7 @@ public class Bswabe {
 	 * Generate a public key and corresponding master secret key.
 	 */
 
+	// type a -> symmetric pairing.
 	private static String curveParams = "type a\n"
 			+ "q 87807107996633125224377819847540498158068831994142082"
 			+ "1102865339926647563088022295707862517942266222142315585"
@@ -36,6 +37,7 @@ public class Bswabe {
 
 		pub.pairingDesc = curveParams;
 		pub.p = PairingFactory.getPairing(params);
+		System.out.println("isPairingSymmetric:" + pub.p.isSymmetric());
 		Pairing pairing = pub.p;
 
 		pub.g = pairing.getG1().newElement();
@@ -64,6 +66,10 @@ public class Bswabe {
 		pub.h.powZn(msk.beta);
 
 		pub.g_hat_alpha = pairing.pairing(pub.g, msk.g_alpha);
+
+		// Add H0, H1, H2 here.
+		// H0, H1: {0,1}* -> G1*
+		// H2: GT -> ZP*
 	}
 
 	/*
@@ -216,6 +222,10 @@ public class Bswabe {
 	 * 
 	 * "(foo bar fim 2of3) (baf) 1of2"
 	 * left right root
+	 *
+	 * 		          1of2
+	 * 		  2of3			 (baf)
+	 * (foo) (bar) (fim)
 	 * 
 	 * specifies a policy with two threshold gates and four leaves. It is not
 	 * possible to specify an attribute with whitespace in it (although "_" is
@@ -247,11 +257,16 @@ public class Bswabe {
 		m.setToRandom();
 		s.setToRandom();
 		cph.cs = pub.g_hat_alpha.duplicate();
+		// cs = e(g,g)^{alpha}
 		cph.cs.powZn(s); /* num_exps++; */
+		// cs = e(g,g)^{alpha*s}
 		cph.cs.mul(m); /* num_muls++; */
+		// cs = m*e(g,g)^{alpha*s} -> C_bar
 
 		cph.c = pub.h.duplicate();
+		// c = g^beta
 		cph.c.powZn(s); /* num_exps++; */
+		// c = h^s
 
 		fillPolicy(cph.p, pub, s);
 
@@ -389,7 +404,7 @@ public class Bswabe {
 					pickSatisfyMinLeaves(p.children[i], prv);
 
 			for (i = 0; i < len; i++)
-				c.add(new Integer(i));
+				c.add(i);
 
 			Collections.sort(c, new IntegerComparator(p));
 
@@ -403,7 +418,7 @@ public class Bswabe {
 					l++;
 					p.min_leaves += p.children[c_i].min_leaves;
 					k = c_i + 1;
-					p.satl.add(new Integer(k));
+					p.satl.add(k);
 				}
 			}
 		}
@@ -450,17 +465,23 @@ public class Bswabe {
 		h = pairing.getG2().newElement();
 
 		p.q = randPoly(p.k - 1, e);
+		// p.q = q0 + q1*x + q2*x^2 + ... +
 
 		if (p.children == null || p.children.length == 0) {
+			// leaf node
 			p.c = pairing.getG1().newElement();
 			p.cp = pairing.getG2().newElement();
 
 			elementFromString(h, p.attr);
-			p.c = pub.g.duplicate();;
-			p.c.powZn(p.q.coef[0]); 	
+			// h = H(p.attr)
+			p.c = pub.g.duplicate();
+			p.c.powZn(p.q.coef[0]);
+			// p.c = g^{q0} = Cy
 			p.cp = h.duplicate();
-			p.cp.powZn(p.q.	coef[0]);	
+			p.cp.powZn(p.q.	coef[0]);
+			// p.cp = {H(p.attr)}^{q0} = Cy_prime
 		} else {
+			// non-leaf node
 			for (i = 0; i < p.children.length; i++) {
 				r.set(i + 1);
 				evalPoly(t, p.q, r);

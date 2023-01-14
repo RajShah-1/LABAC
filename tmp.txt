@@ -51,8 +51,8 @@ Current Impl:
 		- What should we store here?
 - Policy contains the following:
 	- Attribute (for leaf node)
-	- c: 
-	- cp: 
+	- c: Cy
+	- cp: Cy_prime
 	- children
 	- q (only for enc)
 		- BswabePolynomial
@@ -62,6 +62,8 @@ Current Impl:
 		- satisfiable
 		- min_leaves
 		- attri
+
+- elementFromString: H -> Hash function
 
 
 - BswabeCphKey

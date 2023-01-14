@@ -5,7 +5,7 @@ public class Demo {
 
 	static String dir = "demo/cpabe";
 
-    static String pubfile = dir + "/pub_key";
+	static String pubfile = dir + "/pub_key";
 	static String mskfile = dir + "/master_key";
 	static String prvfile = dir + "/prv_key";
 

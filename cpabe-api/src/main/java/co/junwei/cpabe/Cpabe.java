@@ -74,6 +74,10 @@ public class Cpabe {
 		pub_byte = Common.suckFile(pubfile);
 		pub = SerializeUtils.unserializeBswabePub(pub_byte);
 
+		// {0,1}* -> binary key for enc in AES -> message (m)
+		// H: {0,1}* -> G1
+		// m in G1 -> m.bytes()
+
 		keyCph = Bswabe.enc(pub, policy);
 		cph = keyCph.cph;
 		m = keyCph.key;
