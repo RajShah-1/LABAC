@@ -1,6 +1,8 @@
 package co.junwei.bswabe;
 
 import co.junwei.cpabe.Location;
+import co.junwei.cpabe.LocationStore;
+import co.junwei.cpabe.TrapDoor;
 import it.unisa.dia.gas.jpbc.CurveParameters;
 import it.unisa.dia.gas.jpbc.Element;
 import it.unisa.dia.gas.jpbc.Pairing;
@@ -206,12 +208,6 @@ public class Bswabe {
         return prv;
     }
 
-
-    public static BswabeCphKey enc(BswabePub pub,
-                                   String policy) throws Exception {
-        return enc(pub, policy, new HashMap<>());
-    }
-
     /*
      * Pick a random group element and encrypt it under the specified access
      * policy. The resulting ciphertext is returned and the Element given as an
@@ -248,8 +244,7 @@ public class Bswabe {
      * retrieved by calling bswabe_error().
      */
     public static BswabeCphKey enc(BswabePub pub,
-                                   String policy,
-                                   Map<String, Location> locations)
+                                   String policy)
             throws Exception {
         BswabeCphKey keyCph = new BswabeCphKey();
         BswabeCph cph = new BswabeCph();
@@ -481,10 +476,10 @@ public class Bswabe {
 
         // p.q = q0 + q1*x + q2*x^2 + ... +
 
-        if (p.l1 != null) {
+        if (p.trapDoor != null) {
             // node is associated with location l1.
             // q0 = q0 - s_k_x
-            e0 = e0.sub(p.l1.s_k_x);
+            e0 = e0.sub(p.trapDoor.l.s_k_x);
         }
 
         p.q = randPoly(p.k - 1, e0);
@@ -553,16 +548,7 @@ public class Bswabe {
         return q;
     }
 
-    public static BswabePolicy testParse(String s, Map<String, Location> l) throws Exception {
-        return parsePolicyPostfix(s, l);
-    }
-
-    private static BswabePolicy parsePolicyPostfix(String s) throws Exception {
-        return parsePolicyPostfix(s, new HashMap<>());
-    }
-
-    private static BswabePolicy parsePolicyPostfix(String s,
-                                                   Map<String, Location> locations)
+    private static BswabePolicy parsePolicyPostfix(String s)
             throws Exception {
         String[] toks;
         String tok;
@@ -574,33 +560,36 @@ public class Bswabe {
         int toks_cnt = toks.length;
         for (int index = 0; index < toks_cnt; index++) {
             int i, k, n;
+            TrapDoor trapDoor = null;
 
             tok = toks[index];
             if (!tok.contains("of")) {
                 String token = tok;
-                Location location = null;
                 if (tok.contains("!")) {
                     String[] tokens = tok.split("!");
                     token  = tokens[0];
                     String locationName = tokens[1];
-                    if (!locations.containsKey(locationName)) {
+                    if (!LocationStore.contains(locationName)) {
                         throw new IllegalArgumentException("Invalid location name: " + locationName + ".");
                     }
-                    location = locations.get(locationName);
+                    Location l = new Location(LocationStore.getLocation(locationName));
+                    l.setSecret();
+                    trapDoor = new TrapDoor(l);
                 }
-                stack.add(baseNode(1, token, location));
+                stack.add(baseNode(1, token, trapDoor));
             } else {
                 BswabePolicy node;
                 String token = tok;
-                Location location = null;
                 if (tok.contains("!")) {
                     String[] tokens = tok.split("!");
                     token = tokens[0];
                     String locationName = tokens[1];
-                    if (!locations.containsKey(locationName)) {
+                    if (!LocationStore.contains(locationName)) {
                         throw new IllegalArgumentException("Invalid location name: " + locationName + ".");
                     }
-                    location = locations.get(locationName);
+                    Location l = new Location(LocationStore.getLocation(locationName));
+                    l.setSecret();
+                    trapDoor = new TrapDoor(l);
                 }
 
                 /* parse k of n node */
@@ -627,7 +616,7 @@ public class Bswabe {
                 }
 
                 /* pop n things and fill in children */
-                node = baseNode(k, null, location);
+                node = baseNode(k, null, trapDoor);
                 node.children = new BswabePolicy[n];
 
                 for (i = n - 1; i >= 0; i--)
@@ -655,7 +644,7 @@ public class Bswabe {
         return baseNode(k, s, null);
     }
 
-    private static BswabePolicy baseNode(int k, String s, Location l1) {
+    private static BswabePolicy baseNode(int k, String s, TrapDoor trapDoor) {
         BswabePolicy p = new BswabePolicy();
 
         p.k = k;
@@ -665,9 +654,7 @@ public class Bswabe {
             p.attr = null;
         p.q = null;
 
-        if (l1 != null) {
-            p.l1 = new Location(l1);
-        }
+        p.trapDoor = trapDoor;
 
         return p;
     }
@@ -675,7 +662,7 @@ public class Bswabe {
     /**
      * H1 function. {0, 1}* -> Element from G1*
      */
-    private static void elementFromString(Element h, String s)
+    public static void elementFromString(Element h, String s)
             throws NoSuchAlgorithmException {
         MessageDigest md = MessageDigest.getInstance("SHA-1");
         byte[] digest = md.digest(s.getBytes());
@@ -685,7 +672,7 @@ public class Bswabe {
     /**
      * H2 function. G1 -> Zp*
      */
-    private static void elementFromString(Element in, Element out)
+    public static void elementFromElement(Element in, Element out)
             throws NoSuchAlgorithmException {
         MessageDigest md = MessageDigest.getInstance("SHA-1");
         byte[] digest = md.digest(in.toBytes());

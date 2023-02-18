@@ -1,5 +1,7 @@
 package co.junwei.bswabe;
 
+import co.junwei.cpabe.LocationStore;
+import co.junwei.cpabe.TrapDoor;
 import it.unisa.dia.gas.jpbc.CurveParameters;
 import it.unisa.dia.gas.jpbc.Element;
 import it.unisa.dia.gas.jpbc.Pairing;
@@ -7,6 +9,7 @@ import it.unisa.dia.gas.plaf.jpbc.pairing.DefaultCurveParameters;
 import it.unisa.dia.gas.plaf.jpbc.pairing.PairingFactory;
 
 import java.io.ByteArrayInputStream;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 
 public class SerializeUtils {
@@ -191,7 +194,7 @@ public class SerializeUtils {
 		return Byte_arr2byte_arr(arrlist);
 	}
 
-	public static BswabeCph bswabeCphUnserialize(BswabePub pub, byte[] cphBuf) {
+	public static BswabeCph bswabeCphUnserialize(BswabePub pub, byte[] cphBuf) throws NoSuchAlgorithmException {
 		BswabeCph cph = new BswabeCph();
 		int offset = 0;
 		int[] offset_arr = new int[1];
@@ -237,8 +240,18 @@ public class SerializeUtils {
 	}
 
 	private static void serializePolicy(ArrayList<Byte> arrlist, BswabePolicy p) {
+		/*
+		 * policy:
+		 * [k=1] [1/0] [if 1, td] 0 [attr] [c] [cp]
+		 * [k]   [1/0] [if 1, td] n <serialize each child>
+		 */
 		serializeUint32(arrlist, p.k);
-	
+		if (p.trapDoor == null){
+			serializeUint32(arrlist, 0);
+		} else {
+			serializeUint32(arrlist, 1);
+			p.trapDoor.serialize(arrlist);
+		}
 		if (p.children == null || p.children.length == 0) {
 			serializeUint32(arrlist, 0);
 			serializeString(arrlist, p.attr);
@@ -252,13 +265,24 @@ public class SerializeUtils {
 	}
 
 	private static BswabePolicy unserializePolicy(BswabePub pub, byte[] arr,
-			int[] offset) {
+			int[] offset) throws NoSuchAlgorithmException {
 		int i;
 		int n;
 		BswabePolicy p = new BswabePolicy();
 		p.k = unserializeUint32(arr, offset[0]);
 		offset[0] += 4;
 		p.attr = null;
+
+		p.trapDoor = null;
+		int isTrapDoor = unserializeUint32(arr, offset[0]);
+		offset[0] += 4;
+		if (isTrapDoor == 1) {
+			StringBuffer sb = new StringBuffer();
+			offset[0] = unserializeString(arr, offset[0], sb);
+			p.trapDoor = new TrapDoor(LocationStore.getLocation(sb.toString()));
+			offset[0] = unserializeElement(arr, offset[0], p.trapDoor.Ax);
+			offset[0] = unserializeElement(arr, offset[0], p.trapDoor.Bx);
+		}
 	
 		/* children */
 		n = unserializeUint32(arr, offset[0]);

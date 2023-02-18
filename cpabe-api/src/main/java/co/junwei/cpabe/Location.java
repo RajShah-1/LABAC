@@ -33,17 +33,18 @@ public class Location {
         this.gamma_k = l.gamma_k;
         this.pairing = l.pairing;
         this.v_k = l.v_k;
-        setSecret();
     }
 
     public Location(String locationName,
-                    String formatDescription) {
+                    String formatDescription,
+                    Pairing p) {
         this.locationName = locationName;
         this.formatDescription = formatDescription;
+        this.pairing = p;
     }
 
-    public void setup(Pairing p) {
-        this.pairing = p;
+    public void setup() {
+        Pairing p = this.pairing;
 
         gamma_k = p.getZr().newElement();
         gamma_k.setToRandom();
@@ -71,11 +72,12 @@ public class Location {
                 + "822919615131047207289359704531102844802183906537786776\n"
                 + "r 730750818665451621361119245571504901405976559617\n"
                 + "exp2 159\n" + "exp1 107\n" + "sign1 1\n" + "sign0 1\n";
-        Location loc = new Location("abc", "12.12,23.23");
         CurveParameters params = new DefaultCurveParameters()
                 .load(new ByteArrayInputStream(curveParams.getBytes()));
         Pairing p = PairingFactory.getPairing(params);
-        loc.setup(p);
+
+        Location loc = new Location("abc", "12.12,23.23", p);
+        loc.setup();
         System.out.println(loc.locationName + ", " + loc.formatDescription + ", [" + loc.gamma_k + "], " + loc.l_k);
     }
 }

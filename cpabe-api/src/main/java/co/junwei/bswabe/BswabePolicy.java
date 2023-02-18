@@ -3,6 +3,7 @@ package co.junwei.bswabe;
 import java.util.ArrayList;
 
 import co.junwei.cpabe.Location;
+import co.junwei.cpabe.TrapDoor;
 import it.unisa.dia.gas.jpbc.Element;
 
 public class BswabePolicy {
@@ -17,8 +18,7 @@ public class BswabePolicy {
 	/* array of BswabePolicy and length is 0 for leaves */
 	public BswabePolicy[] children;
 
-	/* Location associated with the node. Null if no locations are associated. */
-	public Location l1;
+	public TrapDoor trapDoor;
 	
 	/* only used during encryption */
 	public BswabePolynomial q;
