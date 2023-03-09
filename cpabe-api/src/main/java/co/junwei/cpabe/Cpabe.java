@@ -100,7 +100,7 @@ public class Cpabe {
 	}
 
 	public void dec(String pubfile, String prvfile, String encfile,
-			String decfile) throws Exception {
+			String decfile, String userLocation) throws Exception {
 		byte[] aesBuf, cphBuf;
 		byte[] plt;
 		byte[] prv_byte;
@@ -124,7 +124,7 @@ public class Cpabe {
 		prv_byte = Common.suckFile(prvfile);
 		prv = SerializeUtils.unserializeBswabePrv(pub, prv_byte);
 
-		BswabeElementBoolean beb = Bswabe.dec(pub, prv, cph);
+		BswabeElementBoolean beb = Bswabe.dec(pub, prv, cph, userLocation);
 		System.err.println("e = " + beb.e.toString());
 		if (beb.b) {
 			plt = AESCoder.decrypt(beb.e.toBytes(), aesBuf);

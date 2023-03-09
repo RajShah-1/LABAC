@@ -32,7 +32,15 @@ public class Test {
                     "l1", new Location("bbs", "10,20", p),
                     "l2", new Location("hyd", "30,40", p)
             );
-            BswabePolicy root = Bswabe.testParse("foo bar!l1 1of2!l2", locations);
+
+//            locations.get("l1").setup();
+//            locations.get("l2").setup();
+
+            LocationStore.addLocation(locations.get("l1"));
+            LocationStore.addLocation(locations.get("l2"));
+
+
+            BswabePolicy root = Bswabe.testParse("foo bar!bbs 1of2!hyd");
             printPostOrder(root);
             //
 
@@ -42,9 +50,10 @@ public class Test {
     }
 
     static void printPostOrder(BswabePolicy root) {
+
         String locationString = "";
-        if (root.l1 != null) {
-            locationString = "!" + root.l1.locationName;
+        if (root.trapDoor != null && root.trapDoor.l != null) {
+            locationString = "!" + root.trapDoor.l.locationName;
         }
 
         BswabePolicy[] children = root.children;

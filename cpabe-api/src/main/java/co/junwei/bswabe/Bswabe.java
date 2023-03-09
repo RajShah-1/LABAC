@@ -30,14 +30,24 @@ public class Bswabe {
             + "r 730750818665451621361119245571504901405976559617\n"
             + "exp2 159\n" + "exp1 107\n" + "sign1 1\n" + "sign0 1\n";
 
+    private static final Pairing ourPairing;
+
+    static {
+        CurveParameters params = new DefaultCurveParameters()
+                .load(new ByteArrayInputStream(curveParams.getBytes()));
+        ourPairing = PairingFactory.getPairing(params);
+    }
+
+    public static Pairing getPairing() {
+         return ourPairing;
+    }
+
     public static void setup(BswabePub pub, BswabeMsk msk) {
         Element alpha, beta_inv;
 
-        CurveParameters params = new DefaultCurveParameters()
-                .load(new ByteArrayInputStream(curveParams.getBytes()));
-
         pub.pairingDesc = curveParams;
-        pub.p = PairingFactory.getPairing(params);
+        pub.p = ourPairing;
+
         System.out.println("isPairingSymmetric:" + pub.p.isSymmetric());
         Pairing pairing = pub.p;
 
@@ -93,6 +103,8 @@ public class Bswabe {
         r.setToRandom();
         g_r = pub.gp.duplicate();
         g_r.powZn(r);
+
+        prv.d_prime = g_r;
 
         prv.d = msk.g_alpha.duplicate();
         prv.d.mul(g_r);
@@ -259,7 +271,7 @@ public class Bswabe {
         m = pairing.getGT().newElement();
         cph.cs = pairing.getGT().newElement();
         cph.c = pairing.getG1().newElement();
-        cph.p = parsePolicyPostfix(policy);
+        cph.p = parsePolicyPostfix(policy, pub);
 
         /* compute */
         m.setToRandom();
@@ -284,6 +296,13 @@ public class Bswabe {
         return keyCph;
     }
 
+
+
+    public static BswabeElementBoolean dec(BswabePub pub,
+                                           BswabePrv prv,
+                                           BswabeCph cph){
+        return dec(pub, prv, cph, "");
+    }
     /*
      * Decrypt the specified ciphertext using the given private key, filling in
      * the provided element m (which need not be initialized) with the result.
@@ -291,8 +310,10 @@ public class Bswabe {
      * Returns true if decryption succeeded, false if this key does not satisfy
      * the policy of the ciphertext (in which case m is unaltered).
      */
-    public static BswabeElementBoolean dec(BswabePub pub, BswabePrv prv,
-                                           BswabeCph cph) {
+    public static BswabeElementBoolean dec(BswabePub pub,
+                                           BswabePrv prv,
+                                           BswabeCph cph,
+                                           String userLocation) {
         Element t;
         Element m;
         BswabeElementBoolean beb = new BswabeElementBoolean();
@@ -311,7 +332,7 @@ public class Bswabe {
 
         pickSatisfyMinLeaves(cph.p, prv);
 
-        decFlatten(t, cph.p, prv, pub);
+        decFlatten(t, cph.p, prv, pub, userLocation);
 
         m = cph.cs.duplicate();
         m.mul(t); /* num_muls++; */
@@ -327,25 +348,25 @@ public class Bswabe {
     }
 
     private static void decFlatten(Element r, BswabePolicy p, BswabePrv prv,
-                                   BswabePub pub) {
+                                   BswabePub pub, String userLocation) {
         Element one;
         one = pub.p.getZr().newElement();
         one.setToOne();
         r.setToOne();
 
-        decNodeFlatten(r, one, p, prv, pub);
+        decNodeFlatten(r, one, p, prv, pub, userLocation);
     }
 
     private static void decNodeFlatten(Element r, Element exp, BswabePolicy p,
-                                       BswabePrv prv, BswabePub pub) {
+                                       BswabePrv prv, BswabePub pub, String userLocation) {
         if (p.children == null || p.children.length == 0)
-            decLeafFlatten(r, exp, p, prv, pub);
+            decLeafFlatten(r, exp, p, prv, pub, userLocation);
         else
-            decInternalFlatten(r, exp, p, prv, pub);
+            decInternalFlatten(r, exp, p, prv, pub, userLocation);
     }
 
     private static void decLeafFlatten(Element r, Element exp, BswabePolicy p,
-                                       BswabePrv prv, BswabePub pub) {
+                                       BswabePrv prv, BswabePub pub, String userLocation) {
         BswabePrvComp c;
         Element s, t;
 
@@ -361,10 +382,17 @@ public class Bswabe {
         s.powZn(exp); /* num_exps++; */
 
         r.mul(s); /* num_muls++; */
+
+        if (p.trapDoor != null) {
+            LocationStore.createToken(p.trapDoor, pub.p, userLocation);
+            Element token = p.trapDoor.exposeTrapdoor(pub.p, prv.d_prime);
+            r.mul(token);
+        }
     }
 
     private static void decInternalFlatten(Element r, Element exp,
-                                           BswabePolicy p, BswabePrv prv, BswabePub pub) {
+                                           BswabePolicy p, BswabePrv prv, BswabePub pub,
+                                           String userLocation) {
         int i;
         Element t, expnew;
 
@@ -375,7 +403,13 @@ public class Bswabe {
             lagrangeCoef(t, p.satl, (p.satl.get(i)).intValue());
             expnew = exp.duplicate();
             expnew.mul(t);
-            decNodeFlatten(r, expnew, p.children[p.satl.get(i) - 1], prv, pub);
+            decNodeFlatten(r, expnew, p.children[p.satl.get(i) - 1], prv, pub, userLocation);
+        }
+
+        if (p.trapDoor != null) {
+            LocationStore.createToken(p.trapDoor, pub.p, userLocation);
+            Element token = p.trapDoor.exposeTrapdoor(pub.p, prv.d_prime);
+            r.mul(token);
         }
     }
 
@@ -548,7 +582,11 @@ public class Bswabe {
         return q;
     }
 
-    private static BswabePolicy parsePolicyPostfix(String s)
+    public static BswabePolicy testParse(String s) throws Exception {
+        return parsePolicyPostfix(s, new BswabePub());
+    }
+
+    private static BswabePolicy parsePolicyPostfix(String s, BswabePub pub)
             throws Exception {
         String[] toks;
         String tok;
@@ -574,7 +612,7 @@ public class Bswabe {
                     }
                     Location l = new Location(LocationStore.getLocation(locationName));
                     l.setSecret();
-                    trapDoor = new TrapDoor(l);
+                    trapDoor = new TrapDoor(l, pub);
                 }
                 stack.add(baseNode(1, token, trapDoor));
             } else {
@@ -589,7 +627,7 @@ public class Bswabe {
                     }
                     Location l = new Location(LocationStore.getLocation(locationName));
                     l.setSecret();
-                    trapDoor = new TrapDoor(l);
+                    trapDoor = new TrapDoor(l, pub);
                 }
 
                 /* parse k of n node */

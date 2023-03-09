@@ -140,6 +140,7 @@ public class SerializeUtils {
 		arrlist = new ArrayList<Byte>();
 		prvCompsLen = prv.comps.size();
 		serializeElement(arrlist, prv.d);
+		serializeElement(arrlist, prv.d_prime);
 		serializeUint32(arrlist, prvCompsLen);
 	
 		for (i = 0; i < prvCompsLen; i++) {
@@ -161,6 +162,9 @@ public class SerializeUtils {
 	
 		prv.d = pub.p.getG2().newElement();
 		offset = unserializeElement(b, offset, prv.d);
+
+		prv.d_prime = pub.p.getG2().newElement();
+		offset = unserializeElement(b, offset, prv.d_prime);
 	
 		prv.comps = new ArrayList<BswabePrvComp>();
 		len = unserializeUint32(b, offset);
@@ -279,7 +283,7 @@ public class SerializeUtils {
 		if (isTrapDoor == 1) {
 			StringBuffer sb = new StringBuffer();
 			offset[0] = unserializeString(arr, offset[0], sb);
-			p.trapDoor = new TrapDoor(LocationStore.getLocation(sb.toString()));
+			p.trapDoor = new TrapDoor(LocationStore.getLocation(sb.toString()), pub);
 			offset[0] = unserializeElement(arr, offset[0], p.trapDoor.Ax);
 			offset[0] = unserializeElement(arr, offset[0], p.trapDoor.Bx);
 		}

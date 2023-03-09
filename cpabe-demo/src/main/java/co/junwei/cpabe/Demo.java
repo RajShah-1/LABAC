@@ -1,5 +1,8 @@
 package co.junwei.cpabe;
 
+import co.junwei.bswabe.Bswabe;
+import it.unisa.dia.gas.jpbc.Pairing;
+
 public class Demo {
 	final static boolean DEBUG = true;
 
@@ -404,7 +407,7 @@ public class Demo {
 			+ "sn:student2 cn:student2 uid:student2 userPassword:student2 "
 			+ "ou:idp o:computer mail:student2@sdu.edu.cn title:student";
 
-	static String student_policy = "sn:student2 cn:student2 uid:student2 3of3"; // K = 3
+	static String student_policy = "sn:student2 cn:student2 uid:student2!bbs 3of3"; // K = 3
 
 	public static void main(String[] args) throws Exception {
 		String attr_str;
@@ -412,6 +415,16 @@ public class Demo {
 		// attr = attr_sara;
 		// policy = policy_kevin_or_sara;
 		//attr_str = array2Str(attr);
+		Pairing p = Bswabe.getPairing();
+
+		Location bbs = new Location("bbs", "10,20", p);
+		Location blr = new Location("blr", "10,30", p);
+
+//		bbs.setup();
+//		blr.setup();
+
+		LocationStore.addLocation(bbs);
+		LocationStore.addLocation(blr);
 
 		attr_str = student_attr;
 		policy = student_policy;
@@ -430,7 +443,7 @@ public class Demo {
 		println("//end to enc");
 
 		println("//start to dec");
-		test.dec(pubfile, prvfile, encfile, decfile);
+		test.dec(pubfile, prvfile, encfile, decfile, "10,20");
 		println("//end to dec");
 	}
 

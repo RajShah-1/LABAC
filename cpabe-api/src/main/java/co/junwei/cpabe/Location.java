@@ -41,9 +41,11 @@ public class Location {
         this.locationName = locationName;
         this.formatDescription = formatDescription;
         this.pairing = p;
+
+        setup();
     }
 
-    public void setup() {
+    private void setup() {
         Pairing p = this.pairing;
 
         gamma_k = p.getZr().newElement();
@@ -59,8 +61,10 @@ public class Location {
     }
 
     public void setSecret() {
+        System.out.println("SetSecret called!");
         s_k_x = pairing.getZr().newElement();
         s_k_x.setToRandom();
+        System.out.println("s_k_x: " + s_k_x);
     }
 
     public static void main(String[] args) {
