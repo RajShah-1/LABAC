@@ -1,5 +1,6 @@
 package co.junwei.bswabe;
 
+import co.junwei.cpabe.ElementsStore;
 import co.junwei.cpabe.Location;
 import co.junwei.cpabe.LocationStore;
 import co.junwei.cpabe.TrapDoor;
@@ -51,7 +52,7 @@ public class Bswabe {
         System.out.println("isPairingSymmetric:" + pub.p.isSymmetric());
         Pairing pairing = pub.p;
 
-        pub.g = pairing.getG1().newElement();
+        pub.g = ElementsStore.getG();
         pub.f = pairing.getG1().newElement();
         pub.h = pairing.getG1().newElement();
         pub.gp = pairing.getG2().newElement();
@@ -62,7 +63,6 @@ public class Bswabe {
 
         alpha.setToRandom();
         msk.beta.setToRandom();
-        pub.g.setToRandom();
         pub.gp.setToRandom();
 
         msk.g_alpha = pub.gp.duplicate();

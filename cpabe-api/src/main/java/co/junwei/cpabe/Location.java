@@ -33,6 +33,7 @@ public class Location {
         this.gamma_k = l.gamma_k;
         this.pairing = l.pairing;
         this.v_k = l.v_k;
+        this.s_k_x = l.s_k_x;
     }
 
     public Location(String locationName,
@@ -51,19 +52,21 @@ public class Location {
         gamma_k = p.getZr().newElement();
         gamma_k.setToRandom();
 
-        l_k = p.getG1().newElement();
+        l_k = ElementsStore.getG();
         l_k = l_k.powZn(gamma_k);
 
         v_k = pairing.getZr().newElement();
         v_k.setToRandom();
 
-        setSecret();
+        s_k_x = pairing.getZr().newElement();
+        s_k_x.setToRandom();
+//        setSecret();
     }
 
     public void setSecret() {
-        System.out.println("SetSecret called!");
-        s_k_x = pairing.getZr().newElement();
-        s_k_x.setToRandom();
+        System.out.println("SetSecret called for %s!".formatted(locationName));
+//        s_k_x = pairing.getZr().newElement();
+//        s_k_x.setToRandom();
         System.out.println("s_k_x: " + s_k_x);
     }
 

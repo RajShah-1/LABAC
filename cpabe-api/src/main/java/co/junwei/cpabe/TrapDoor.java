@@ -27,24 +27,37 @@ public class TrapDoor {
         // System.out.println(pub.g);
         Pairing p = l.pairing;
 
-        Ax = pub.g.duplicate();
+        Ax = ElementsStore.getG();
+        System.out.println("[Trapdoor ctor] g: " + Ax);
         Ax = Ax.powZn(l.v_k);
 
         Bx = l.s_k_x.duplicate();
         Element tmp0 = p.getG1().newElement();
         // tmp0 = H1(f_loc_k)
         elementFromString(tmp0, l.formatDescription);
+        System.out.println("element of format description: " + tmp0);
         Element tmp1 = p.pairing(tmp0, l.l_k);
         // tmp1 = e(H1(f_loc_k), l_k)^{v_k}
-        tmp1.powZn(l.v_k);
+        tmp1 = tmp1.powZn(l.v_k);
+        System.out.println("before h2: " + tmp1);
         Element tmp2 = p.getZr().newElement();
         // tmp2 = H2(e(H1(f_loc_k, l_k))^{v_k})
         elementFromElement(tmp1, tmp2);
-        System.out.println("tmp2" + tmp2);
-        System.out.println("s_k_x" + Bx);
-        Bx.add(tmp2);
-        System.out.println("Ax: " + Ax);
-        System.out.println("Bx: " + Bx);
+        System.out.println("[Trapdoor ctor] tmp2: " + tmp2);
+        System.out.println("[Trapdoor ctor] location: " + l.locationName);
+        System.out.println("[Trapdoor ctor] s_k_x: " + Bx);
+
+        Bx = Bx.add(tmp2);
+
+        System.out.println("[Trapdoor ctor] Ax: " + Ax);
+        System.out.println("[Trapdoor ctor] Bx: " + Bx);
+
+        Element tmp = tmp0.duplicate();
+        tmp.powZn(l.gamma_k);
+        System.out.println("[trapdoor ctor] h1^gamma_k: " + tmp);
+        System.out.println("[trapdoor ctor] Ax: " + Ax);
+        Element eTmp = p.pairing(tmp, Ax);
+        System.out.println("[trapdoor ctor] e(...): " + eTmp);
     }
 
     public void serialize(ArrayList<Byte> bytes) {

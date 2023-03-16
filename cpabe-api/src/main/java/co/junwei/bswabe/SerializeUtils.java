@@ -283,6 +283,7 @@ public class SerializeUtils {
 		if (isTrapDoor == 1) {
 			StringBuffer sb = new StringBuffer();
 			offset[0] = unserializeString(arr, offset[0], sb);
+			System.out.println("Deserializing the trapdoor!");
 			p.trapDoor = new TrapDoor(LocationStore.getLocation(sb.toString()), pub);
 			offset[0] = unserializeElement(arr, offset[0], p.trapDoor.Ax);
 			offset[0] = unserializeElement(arr, offset[0], p.trapDoor.Bx);

@@ -38,6 +38,7 @@ public class LocationStore {
 
         try {
             Bswabe.elementFromString(h1, userLocationFormatDesc);
+            System.out.println("element of format description!: " + h1);
         } catch (NoSuchAlgorithmException e) {
             throw new RuntimeException(e);
         }
@@ -45,7 +46,12 @@ public class LocationStore {
         Element e1 = h1.powZn(trapDoor.l.gamma_k);
         Element e2 = trapDoor.Ax;
 
+        System.out.println("token gen: e1: " + e1);
+        System.out.println("token gen: e2: " + e2);
+
         Element e = pairing.pairing(e1, e2);
+
+        System.out.println("token gen: e(...): " + e);
         Element h2 = trapDoor.Bx.getField().newElement();
 
         try {
@@ -53,6 +59,7 @@ public class LocationStore {
         } catch (NoSuchAlgorithmException ex) {
             throw new RuntimeException(ex);
         }
+
 
         Element res = trapDoor.Bx.sub(h2);
 

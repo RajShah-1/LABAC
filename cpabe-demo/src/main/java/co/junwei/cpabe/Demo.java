@@ -417,6 +417,8 @@ public class Demo {
 		//attr_str = array2Str(attr);
 		Pairing p = Bswabe.getPairing();
 
+		ElementsStore.initialize(p);
+
 		Location bbs = new Location("bbs", "10,20", p);
 		Location blr = new Location("blr", "10,30", p);
 
