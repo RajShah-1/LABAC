@@ -14,7 +14,7 @@ public class Demo {
 
 	static String inputfile = dir + "/input.pdf";
 	static String encfile = dir + "/input.pdf.cpabe";
-	static String decfile = dir + "/input.pdf.new";
+	static String decfile = dir + "/input_new.pdf";
 
 	static String[] attr = { "baf1", "fim1", "foo" };
 	static String policy = "foo bar fim 2of3 baf 1of2";

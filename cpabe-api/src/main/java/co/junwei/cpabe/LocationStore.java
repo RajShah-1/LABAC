@@ -78,6 +78,8 @@ public class LocationStore {
             System.out.println("[ERROR] Token does not match!");
         }
 
+        res = ElementsStore.getG().powZn(res);
+
         trapDoor.setToken(res);
 
         return res;

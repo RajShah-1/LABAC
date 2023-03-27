@@ -50,6 +50,7 @@ public class Bswabe {
         pub.p = ourPairing;
 
         System.out.println("isPairingSymmetric:" + pub.p.isSymmetric());
+        ElementsStore.initialize(pub.p);
         Pairing pairing = pub.p;
 
         pub.g = ElementsStore.getG();
