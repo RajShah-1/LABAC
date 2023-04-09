@@ -16,7 +16,6 @@ public class ElementsStore {
     }
 
     public static Element getG() {
-        System.out.println("ElementStore returning g: " + g);
         return g.duplicate();
     }
 }

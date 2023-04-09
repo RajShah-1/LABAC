@@ -218,7 +218,7 @@ public class SerializeUtils {
 
 	/* Method has been test okay */
 	/* potential problem: the number to be serialize is less than 2^31 */
-	private static void serializeUint32(ArrayList<Byte> arrlist, int k) {
+	public static void serializeUint32(ArrayList<Byte> arrlist, int k) {
 		int i;
 		byte b;
 	
@@ -246,8 +246,8 @@ public class SerializeUtils {
 	private static void serializePolicy(ArrayList<Byte> arrlist, BswabePolicy p) {
 		/*
 		 * policy:
-		 * [k=1] [1/0] [if 1, td] 0 [attr] [c] [cp]
-		 * [k]   [1/0] [if 1, td] n <serialize each child>
+		 * [k=1] [1/0] [if 1, td] [id] 0 [attr] [c] [cp]
+		 * [k]   [1/0] [if 1, td] [id] n <serialize each child>
 		 */
 		serializeUint32(arrlist, p.k);
 		if (p.trapDoor == null){
@@ -256,6 +256,7 @@ public class SerializeUtils {
 			serializeUint32(arrlist, 1);
 			p.trapDoor.serialize(arrlist);
 		}
+		serializeUint32(arrlist, p.id);
 		if (p.children == null || p.children.length == 0) {
 			serializeUint32(arrlist, 0);
 			serializeString(arrlist, p.attr);
@@ -283,11 +284,14 @@ public class SerializeUtils {
 		if (isTrapDoor == 1) {
 			StringBuffer sb = new StringBuffer();
 			offset[0] = unserializeString(arr, offset[0], sb);
-			System.out.println("Deserializing the trapdoor!");
-			p.trapDoor = new TrapDoor(LocationStore.getLocation(sb.toString()), pub);
+			int X = unserializeUint32(arr, offset[0]);
+			offset[0] += 4;
+			p.trapDoor = new TrapDoor(X, sb.toString());
 			offset[0] = unserializeElement(arr, offset[0], p.trapDoor.Ax);
 			offset[0] = unserializeElement(arr, offset[0], p.trapDoor.Bx);
 		}
+		p.id = unserializeUint32(arr, offset[0]);
+		offset[0] += 4;
 	
 		/* children */
 		n = unserializeUint32(arr, offset[0]);

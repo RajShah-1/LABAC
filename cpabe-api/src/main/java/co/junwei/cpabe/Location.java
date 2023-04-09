@@ -1,5 +1,6 @@
 package co.junwei.cpabe;
 
+import co.junwei.bswabe.Bswabe;
 import it.unisa.dia.gas.jpbc.CurveParameters;
 import it.unisa.dia.gas.jpbc.Element;
 import it.unisa.dia.gas.jpbc.Pairing;
@@ -7,34 +8,20 @@ import it.unisa.dia.gas.plaf.jpbc.pairing.DefaultCurveParameters;
 import it.unisa.dia.gas.plaf.jpbc.pairing.PairingFactory;
 
 import java.io.ByteArrayInputStream;
+import java.security.NoSuchAlgorithmException;
 
 public class Location {
     public String locationName;
 
     public String formatDescription;
 
-    public Element l_k;
+    private Element l_k;
 
-    public Element gamma_k;
+    Element gamma_k;
 
-    public Element s_k_x;
-
-    public Element v_k;
+    private Element v_k;
 
     public Pairing pairing;
-
-    /**
-     * Copy Constructor. Copies every field except the secret (s_k_x).
-     */
-    public Location(Location l) {
-        this.locationName = l.locationName;
-        this.formatDescription = l.formatDescription;
-        this.l_k = l.l_k;
-        this.gamma_k = l.gamma_k;
-        this.pairing = l.pairing;
-        this.v_k = l.v_k;
-        this.s_k_x = l.s_k_x;
-    }
 
     public Location(String locationName,
                     String formatDescription,
@@ -57,17 +44,12 @@ public class Location {
 
         v_k = pairing.getZr().newElement();
         v_k.setToRandom();
-
-        s_k_x = pairing.getZr().newElement();
-        s_k_x.setToRandom();
-//        setSecret();
     }
 
-    public void setSecret() {
-        System.out.println("SetSecret called for %s!".formatted(locationName));
-//        s_k_x = pairing.getZr().newElement();
-//        s_k_x.setToRandom();
-        System.out.println("s_k_x: " + s_k_x);
+    public Element generateSecret() {
+        Element new_s_k_x = pairing.getZr().newElement();
+        new_s_k_x.setToRandom();
+        return new_s_k_x;
     }
 
     public static void main(String[] args) {
@@ -86,5 +68,27 @@ public class Location {
         Location loc = new Location("abc", "12.12,23.23", p);
         loc.setup();
         System.out.println(loc.locationName + ", " + loc.formatDescription + ", [" + loc.gamma_k + "], " + loc.l_k);
+    }
+
+    public Pair<Element, Element> generateTrapdoor(Element s_k_x) throws NoSuchAlgorithmException {
+        Pairing p = pairing;
+
+        Element Ax = ElementsStore.getG();
+        Ax = Ax.powZn(v_k);
+
+        Element Bx = s_k_x.duplicate();
+        Element tmp0 = p.getG1().newElement();
+        // tmp0 = H1(f_loc_k)
+        Bswabe.elementFromString(tmp0, formatDescription);
+        Element tmp1 = p.pairing(tmp0, l_k);
+        // tmp1 = e(H1(f_loc_k), l_k)^{v_k}
+        tmp1 = tmp1.powZn(v_k);
+        Element tmp2 = p.getZr().newElement();
+        // tmp2 = H2(e(H1(f_loc_k, l_k))^{v_k})
+        Bswabe.elementFromElement(tmp1, tmp2);
+
+        Bx = Bx.add(tmp2);
+
+        return new Pair<>(Ax, Bx);
     }
 }

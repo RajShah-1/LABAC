@@ -8,7 +8,10 @@ import it.unisa.dia.gas.jpbc.Element;
 
 public class BswabePolicy {
 	/* serialized */
-	
+
+	/* Reference of the node. */
+	public int id;
+
 	/* k=1 if leaf, otherwise threshould */
 	public int k;
 	/* attribute string if leaf, otherwise null */

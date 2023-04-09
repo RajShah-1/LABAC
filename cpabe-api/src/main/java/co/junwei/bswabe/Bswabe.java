@@ -49,7 +49,6 @@ public class Bswabe {
         pub.pairingDesc = curveParams;
         pub.p = ourPairing;
 
-        System.out.println("isPairingSymmetric:" + pub.p.isSymmetric());
         ElementsStore.initialize(pub.p);
         Pairing pairing = pub.p;
 
@@ -322,7 +321,7 @@ public class Bswabe {
         m = pub.p.getGT().newElement();
         t = pub.p.getGT().newElement();
 
-        checkSatisfy(cph.p, prv);
+        checkSatisfy(pub, cph.p, prv, userLocation);
         if (!cph.p.satisfiable) {
             System.err
                     .println("cannot decrypt, attributes in key do not satisfy policy");
@@ -368,6 +367,8 @@ public class Bswabe {
 
     private static void decLeafFlatten(Element r, Element exp, BswabePolicy p,
                                        BswabePrv prv, BswabePub pub, String userLocation) {
+        // r -> 1, exp -> 1, p -> policy, prv, pub, user-location.
+
         BswabePrvComp c;
         Element s, t;
 
@@ -376,19 +377,22 @@ public class Bswabe {
         s = pub.p.getGT().newElement();
         t = pub.p.getGT().newElement();
 
+        // s = e(c, d)
         s = pub.p.pairing(p.c, c.d); /* num_pairings++; */
+        // t = e(cp, dp)
         t = pub.p.pairing(p.cp, c.dp); /* num_pairings++; */
         t.invert();
+        // s = s/t
         s.mul(t); /* num_muls++; */
+        // s = (e(c, d)/e(cp, dp))^(exp)
+        if (p.trapDoor != null) {
+            Element token = p.trapDoor.exposeTrapdoor(pub.p, prv.d_prime);
+            s.mul(token);
+        }
         s.powZn(exp); /* num_exps++; */
 
+        // r = r*s
         r.mul(s); /* num_muls++; */
-
-        if (p.trapDoor != null) {
-            LocationStore.createToken(p.trapDoor, pub.p, userLocation);
-            Element token = p.trapDoor.exposeTrapdoor(pub.p, prv.d_prime);
-            r.mul(token);
-        }
     }
 
     private static void decInternalFlatten(Element r, Element exp,
@@ -408,7 +412,6 @@ public class Bswabe {
         }
 
         if (p.trapDoor != null) {
-            LocationStore.createToken(p.trapDoor, pub.p, userLocation);
             Element token = p.trapDoor.exposeTrapdoor(pub.p, prv.d_prime);
             r.mul(token);
         }
@@ -425,10 +428,13 @@ public class Bswabe {
             j = s.get(k).intValue();
             if (j == i)
                 continue;
+            // t = -j
             t.set(-j);
+            // r = r*t
             r.mul(t); /* num_muls++; */
             t.set(i - j);
             t.invert();
+            // r = -j/(i-j)
             r.mul(t); /* num_muls++; */
         }
     }
@@ -467,7 +473,7 @@ public class Bswabe {
         }
     }
 
-    private static void checkSatisfy(BswabePolicy p, BswabePrv prv) {
+    private static void checkSatisfy(BswabePub pub, BswabePolicy p, BswabePrv prv, String userLocation) {
         int i, l;
         String prvAttr;
 
@@ -475,26 +481,39 @@ public class Bswabe {
         if (p.children == null || p.children.length == 0) {
             for (i = 0; i < prv.comps.size(); i++) {
                 prvAttr = prv.comps.get(i).attr;
-                // System.out.println("prvAtt:" + prvAttr);
-                // System.out.println("p.attr" + p.attr);
                 if (prvAttr.compareTo(p.attr) == 0) {
-                    // System.out.println("=staisfy=");
-                    p.satisfiable = true;
-                    p.attri = i;
-                    break;
+                    if (p.trapDoor != null) {
+                        Element token = LocationStore.createToken(p.trapDoor, pub.p, userLocation);
+                        if (token != null) {
+                            p.satisfiable = true;
+                            p.attri = i;
+                            break;
+                        }
+                    } else {
+                        p.satisfiable = true;
+                        p.attri = i;
+                        break;
+                    }
                 }
             }
         } else {
             for (i = 0; i < p.children.length; i++)
-                checkSatisfy(p.children[i], prv);
+                checkSatisfy(pub, p.children[i], prv, userLocation);
 
             l = 0;
             for (i = 0; i < p.children.length; i++)
                 if (p.children[i].satisfiable)
                     l++;
 
-            if (l >= p.k)
+            if (l >= p.k) {
+                if (p.trapDoor != null) {
+                    Element token = LocationStore.createToken(p.trapDoor, pub.p, userLocation);
+                    if (token == null) {
+                        return;
+                    }
+                }
                 p.satisfiable = true;
+            }
         }
     }
 
@@ -511,13 +530,15 @@ public class Bswabe {
 
         // p.q = q0 + q1*x + q2*x^2 + ... +
 
+        Element e1 = e0.duplicate();
         if (p.trapDoor != null) {
             // node is associated with location l1.
             // q0 = q0 - s_k_x
-            e0 = e0.sub(p.trapDoor.l.s_k_x);
+            Element s_k_x = LocationStore.getSecret(p.trapDoor.X, p.trapDoor.locationName);
+            e1 = e1.sub(s_k_x);
         }
 
-        p.q = randPoly(p.k - 1, e0);
+        p.q = randPoly(p.k - 1, e1);
 
         if (p.children == null || p.children.length == 0) {
             // leaf node
@@ -536,7 +557,7 @@ public class Bswabe {
             // non-leaf node
             for (i = 0; i < p.children.length; i++) {
                 r.set(i + 1);
-                evalPoly(t, p.q, r);
+                evalPoly(t, p.q, r); // t = q(r=i+1)
                 fillPolicy(p.children[i], pub, t);
             }
         }
@@ -602,6 +623,8 @@ public class Bswabe {
             TrapDoor trapDoor = null;
 
             tok = toks[index];
+            int id = IdGenerator.getId();
+
             if (!tok.contains("of")) {
                 String token = tok;
                 if (tok.contains("!")) {
@@ -611,11 +634,9 @@ public class Bswabe {
                     if (!LocationStore.contains(locationName)) {
                         throw new IllegalArgumentException("Invalid location name: " + locationName + ".");
                     }
-                    Location l = new Location(LocationStore.getLocation(locationName));
-                    l.setSecret();
-                    trapDoor = new TrapDoor(l, pub);
+                    trapDoor = new TrapDoor(id, locationName);
                 }
-                stack.add(baseNode(1, token, trapDoor));
+                stack.add(baseNode(1, token, trapDoor, id));
             } else {
                 BswabePolicy node;
                 String token = tok;
@@ -626,9 +647,7 @@ public class Bswabe {
                     if (!LocationStore.contains(locationName)) {
                         throw new IllegalArgumentException("Invalid location name: " + locationName + ".");
                     }
-                    Location l = new Location(LocationStore.getLocation(locationName));
-                    l.setSecret();
-                    trapDoor = new TrapDoor(l, pub);
+                    trapDoor = new TrapDoor(id, locationName);
                 }
 
                 /* parse k of n node */
@@ -655,7 +674,7 @@ public class Bswabe {
                 }
 
                 /* pop n things and fill in children */
-                node = baseNode(k, null, trapDoor);
+                node = baseNode(k, null, trapDoor, id);
                 node.children = new BswabePolicy[n];
 
                 for (i = n - 1; i >= 0; i--)
@@ -679,11 +698,14 @@ public class Bswabe {
         return root;
     }
 
-    private static BswabePolicy baseNode(int k, String s) {
-        return baseNode(k, s, null);
+    static class IdGenerator {
+        private static int id = 0;
+        public static int getId() {
+            return id++;
+        }
     }
 
-    private static BswabePolicy baseNode(int k, String s, TrapDoor trapDoor) {
+    private static BswabePolicy baseNode(int k, String s, TrapDoor trapDoor, int id) {
         BswabePolicy p = new BswabePolicy();
 
         p.k = k;
@@ -694,6 +716,7 @@ public class Bswabe {
         p.q = null;
 
         p.trapDoor = trapDoor;
+        p.id = id;
 
         return p;
     }
