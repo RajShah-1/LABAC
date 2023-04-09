@@ -4,6 +4,8 @@ import it.unisa.dia.gas.jpbc.Element;
 
 import java.io.IOException;
 import java.security.NoSuchAlgorithmException;
+import java.util.HashMap;
+import java.util.Map;
 
 import co.junwei.bswabe.Bswabe;
 import co.junwei.bswabe.BswabeCph;
@@ -74,13 +76,17 @@ public class Cpabe {
 		pub_byte = Common.suckFile(pubfile);
 		pub = SerializeUtils.unserializeBswabePub(pub_byte);
 
+		// {0,1}* -> binary key for enc in AES -> message (m)
+		// H: {0,1}* -> G1
+		// m in G1 -> m.bytes()
+
 		keyCph = Bswabe.enc(pub, policy);
 		cph = keyCph.cph;
 		m = keyCph.key;
 		System.err.println("m = " + m.toString());
 
 		if (cph == null) {
-			System.out.println("Error happed in enc");
+			System.out.println("Error happened in enc");
 			System.exit(0);
 		}
 
@@ -94,7 +100,7 @@ public class Cpabe {
 	}
 
 	public void dec(String pubfile, String prvfile, String encfile,
-			String decfile) throws Exception {
+			String decfile, String userLocation) throws Exception {
 		byte[] aesBuf, cphBuf;
 		byte[] plt;
 		byte[] prv_byte;
@@ -118,7 +124,7 @@ public class Cpabe {
 		prv_byte = Common.suckFile(prvfile);
 		prv = SerializeUtils.unserializeBswabePrv(pub, prv_byte);
 
-		BswabeElementBoolean beb = Bswabe.dec(pub, prv, cph);
+		BswabeElementBoolean beb = Bswabe.dec(pub, prv, cph, userLocation);
 		System.err.println("e = " + beb.e.toString());
 		if (beb.b) {
 			plt = AESCoder.decrypt(beb.e.toBytes(), aesBuf);

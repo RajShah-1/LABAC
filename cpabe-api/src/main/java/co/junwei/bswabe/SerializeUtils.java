@@ -1,5 +1,7 @@
 package co.junwei.bswabe;
 
+import co.junwei.cpabe.LocationStore;
+import co.junwei.cpabe.TrapDoor;
 import it.unisa.dia.gas.jpbc.CurveParameters;
 import it.unisa.dia.gas.jpbc.Element;
 import it.unisa.dia.gas.jpbc.Pairing;
@@ -7,6 +9,7 @@ import it.unisa.dia.gas.plaf.jpbc.pairing.DefaultCurveParameters;
 import it.unisa.dia.gas.plaf.jpbc.pairing.PairingFactory;
 
 import java.io.ByteArrayInputStream;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 
 public class SerializeUtils {
@@ -137,6 +140,7 @@ public class SerializeUtils {
 		arrlist = new ArrayList<Byte>();
 		prvCompsLen = prv.comps.size();
 		serializeElement(arrlist, prv.d);
+		serializeElement(arrlist, prv.d_prime);
 		serializeUint32(arrlist, prvCompsLen);
 	
 		for (i = 0; i < prvCompsLen; i++) {
@@ -158,6 +162,9 @@ public class SerializeUtils {
 	
 		prv.d = pub.p.getG2().newElement();
 		offset = unserializeElement(b, offset, prv.d);
+
+		prv.d_prime = pub.p.getG2().newElement();
+		offset = unserializeElement(b, offset, prv.d_prime);
 	
 		prv.comps = new ArrayList<BswabePrvComp>();
 		len = unserializeUint32(b, offset);
@@ -191,7 +198,7 @@ public class SerializeUtils {
 		return Byte_arr2byte_arr(arrlist);
 	}
 
-	public static BswabeCph bswabeCphUnserialize(BswabePub pub, byte[] cphBuf) {
+	public static BswabeCph bswabeCphUnserialize(BswabePub pub, byte[] cphBuf) throws NoSuchAlgorithmException {
 		BswabeCph cph = new BswabeCph();
 		int offset = 0;
 		int[] offset_arr = new int[1];
@@ -211,7 +218,7 @@ public class SerializeUtils {
 
 	/* Method has been test okay */
 	/* potential problem: the number to be serialize is less than 2^31 */
-	private static void serializeUint32(ArrayList<Byte> arrlist, int k) {
+	public static void serializeUint32(ArrayList<Byte> arrlist, int k) {
 		int i;
 		byte b;
 	
@@ -237,8 +244,19 @@ public class SerializeUtils {
 	}
 
 	private static void serializePolicy(ArrayList<Byte> arrlist, BswabePolicy p) {
+		/*
+		 * policy:
+		 * [k=1] [1/0] [if 1, td] [id] 0 [attr] [c] [cp]
+		 * [k]   [1/0] [if 1, td] [id] n <serialize each child>
+		 */
 		serializeUint32(arrlist, p.k);
-	
+		if (p.trapDoor == null){
+			serializeUint32(arrlist, 0);
+		} else {
+			serializeUint32(arrlist, 1);
+			p.trapDoor.serialize(arrlist);
+		}
+		serializeUint32(arrlist, p.id);
 		if (p.children == null || p.children.length == 0) {
 			serializeUint32(arrlist, 0);
 			serializeString(arrlist, p.attr);
@@ -252,13 +270,28 @@ public class SerializeUtils {
 	}
 
 	private static BswabePolicy unserializePolicy(BswabePub pub, byte[] arr,
-			int[] offset) {
+			int[] offset) throws NoSuchAlgorithmException {
 		int i;
 		int n;
 		BswabePolicy p = new BswabePolicy();
 		p.k = unserializeUint32(arr, offset[0]);
 		offset[0] += 4;
 		p.attr = null;
+
+		p.trapDoor = null;
+		int isTrapDoor = unserializeUint32(arr, offset[0]);
+		offset[0] += 4;
+		if (isTrapDoor == 1) {
+			StringBuffer sb = new StringBuffer();
+			offset[0] = unserializeString(arr, offset[0], sb);
+			int X = unserializeUint32(arr, offset[0]);
+			offset[0] += 4;
+			p.trapDoor = new TrapDoor(X, sb.toString());
+			offset[0] = unserializeElement(arr, offset[0], p.trapDoor.Ax);
+			offset[0] = unserializeElement(arr, offset[0], p.trapDoor.Bx);
+		}
+		p.id = unserializeUint32(arr, offset[0]);
+		offset[0] += 4;
 	
 		/* children */
 		n = unserializeUint32(arr, offset[0]);
